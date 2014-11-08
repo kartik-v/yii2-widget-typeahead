@@ -29,7 +29,7 @@ use yii\web\View;
  * @since 1.0
  * @see http://twitter.github.com/typeahead.js/examples
  */
-class TypeaheadBasic extends InputWidget
+class TypeaheadBasic extends \kartik\base\InputWidget
 {
     /**
      * @var bool whether the dropdown menu is scrollable
