@@ -21,13 +21,13 @@ The preferred way to install this extension is through [composer](http://getcomp
 To install, either run
 
 ```
-$ php composer.phar require kartik-v/yii2-widget-typeahead "dev-master"
+$ php composer.phar require kartik-v/yii2-widget-typeahead "*"
 ```
 
 or add
 
 ```
-"kartik-v/yii2-widget-typeahead": "dev-master"
+"kartik-v/yii2-widget-typeahead": "*"
 ```
 
 to the ```require``` section of your `composer.json` file.
