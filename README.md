@@ -43,8 +43,8 @@ You can refer detailed documentation and demos for [TypeaheadBasic](http://demos
 ### Usage
 
 ```php
-use kartik\widgets\TypeaheadBasic;
-use kartik\widgets\Typeahead;
+use kartik\typeahead\TypeaheadBasic;
+use kartik\typeahead\Typeahead;
 
 // TypeaheadBasic usage with ActiveForm and model
 echo $form->field($model, 'state_3')->widget(Typeahead::classname(), [
