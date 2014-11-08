@@ -1,5 +1,5 @@
 {
-    "name": "kartik-v/yii2-widget-select2",
+    "name": "kartik-v/yii2-widget-typeahead",
     "description": "Enhanced Yii2 wrapper for the Twitter Typeahead plugin (sub repo split from yii2-widgets).",
     "keywords": ["yii2", "extension", "widget", "typeahead", "form", "dropdown", "jquery", "plugin"],
     "homepage": "https://github.com/kartik-v/yii2-widget-typeahead",
