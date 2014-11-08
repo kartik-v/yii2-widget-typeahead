@@ -7,7 +7,7 @@
  * @version 1.0.0
  */
 
-namespace kartik\widgets;
+namespace kartik\typeahead;
 
 /**
  * Asset bundle for Typeahead Widget (Basic)
