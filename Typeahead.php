@@ -101,7 +101,7 @@ class Typeahead extends TypeaheadBasic
     protected function validateConfig()
     {
         foreach ($this->dataset as $datum) {
-            if (empty($datum['local']) && empty($datum['prefetch']) && empty($datum['remote'])) {
+            if (!isset($datum['local']) && empty($datum['prefetch']) && empty($datum['remote'])) {
                 throw new InvalidConfigException("No data source found for the Typeahead. The 'dataset' array must have one of 'local', 'prefetch', or 'remote' settings enabled.");
             }
         }
