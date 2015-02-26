@@ -1,6 +1,12 @@
 yii2-widget-typeahead
 =====================
 
+[![Latest Stable Version](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/v/stable.svg)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+[![License](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/license.svg)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+[![Total Downloads](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/downloads.svg)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+[![Monthly Downloads](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/d/monthly.png)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+[![Daily Downloads](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/d/daily.png)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+
 The Typeahead extension is a Yii 2 wrapper widget for for the [Twitter Typeahead.js plugin](http://twitter.github.com/typeahead.js/examples) with certain custom enhancements. input widget is a jQuery based replacement for text inputs providing search and typeahead functionality. It is inspired by twitter.com's autocomplete search functionality and based on Twitter's typeahead.js, which is described as a fast and fully-featured autocomplete library. The widget is specially styled for Bootstrap 3. The widget allows graceful degradation to a normal HTML text input, if the browser does not support JQuery. You can also setup model validation rules for the widget like any other field. The extension offers two variations of the widget implementation: 
 
 - `TypeaheadBasic`: This widget is a basic implementation of the *typeahead.js* plugin without any suggestion engine. 
