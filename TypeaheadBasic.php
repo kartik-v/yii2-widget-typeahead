@@ -1,10 +1,10 @@
 <?php
 
 /**
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2015
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
- * @version 1.0.0
+ * @version 1.0.1
 
  */
 
@@ -40,6 +40,36 @@ class TypeaheadBasic extends \kartik\base\InputWidget
      * @var bool whether RTL support is to be enabled
      */
     public $rtl = false;
+    
+    /**
+     * @var array dataset an object that defines a set of data that hydrates suggestions.
+     * For TypeaheadBasic, this is a single dimensional array consisting of following settings. 
+     * For Typeahead, this is a multi-dimensional array, with each array item being an array that 
+     * consists of the following settings.
+     * - source: The backing data source for suggestions. Expected to be a function with the 
+     *   signature `(query, syncResults, asyncResults)`. This can also be a Bloodhound instance.
+     *   If not set, this will be automatically generated based on the bloodhound specific
+     *   properties in the next section below.
+     * - display: string the key used to access the value of the datum in the datum
+     *   object. Defaults to 'value'.
+     * - async: boolean, lets the dataset know if async suggestions should be expected. Defaults to `true`.     
+     * - limit: integer the max number of suggestions from the dataset to display for
+     *   a given query. Defaults to 5.
+     * - templates: array the templates used to render suggestions.
+     * The following properties are bloodhound specific data configuration properties and not applicable
+     * for TypeaheadBasic. Its only applied for Typeahead.
+     * - local: array configuration for the [[local]] list of datums. You must set one of
+     *   [[local]], [[prefetch]], or [[remote]].
+     * - prefetch: array configuration for the [[prefetch]] options object.
+     * - remote: array configuration for the [[remote]] options object.
+     * - initialize: true,
+     * - identify: defaults to _.stringify,
+     * - datumTokenizer: defaults to null,
+     * - queryTokenizer: defaults null,
+     * - sufficient: 5,
+     * - sorter: null,
+     */
+    public $dataset = [];
 
     /**
      * @var array the HTML attributes for container enclosing the input
@@ -104,10 +134,17 @@ class TypeaheadBasic extends \kartik\base\InputWidget
         $view = $this->getView();
         TypeaheadBasicAsset::register($view);
         $this->registerPluginOptions('typeahead');
-        $dataVar = str_replace('-', '_', $this->options['id'] . '_data');
-        $view->registerJs('var ' . $dataVar . ' = ' . Json::encode(array_values($this->data)) . ';');
-        $dataset = Json::encode(['name' => $dataVar, 'source' => new JsExpression('substringMatcher(' . $dataVar . ')')]);
-        $view->registerJs('jQuery("#' . $this->options['id'] . '").typeahead(' . $this->_hashVar . ',' . $dataset . ');');
+        $data = Json::encode(array_values($this->data));
+        $dataVar = 'kvTypData_' . hash('crc32', $data);
+        $view->registerJs("var {$dataVar} = {$data};", View::POS_HEAD);
+        $this->dataset['name'] = $dataVar;
+        if (!isset($this->dataset['source'])) {
+            $this->dataset['source'] = new JsExpression('kvSubstringMatcher(' . $dataVar . ')');
+        }
+        $id = 'jQuery("#' . $this->options['id'] . '")';
+        $dataset = Json::encode($this->dataset);
+        $js = "{$id}.typeahead({$this->_hashVar}, {$dataset});";
+        $view->registerJs($js);
         $this->registerPluginEvents($view);
     }
 }

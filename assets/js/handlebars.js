@@ -163,9 +163,9 @@ var Handlebars = (function () {
         __exports__.COMPILER_REVISION = COMPILER_REVISION;
         var REVISION_CHANGES = {
             1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
-            2: '== 1.0.0-rc.3',
-            3: '== 1.0.0-rc.4',
-            4: '>= 1.0.0'
+            2: '== 1.0.1-rc.3',
+            3: '== 1.0.1-rc.4',
+            4: '>= 1.0.1'
         };
         __exports__.REVISION_CHANGES = REVISION_CHANGES;
         var isArray = Utils.isArray,

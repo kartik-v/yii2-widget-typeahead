@@ -4,7 +4,7 @@
  * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
- * @version 1.0.0
+ * @version 1.0.1
  */
 
 namespace kartik\typeahead;
@@ -15,6 +15,7 @@ use yii\helpers\Json;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidConfigException;
 use yii\web\JsExpression;
+use yii\web\View;
 
 /**
  * Typeahead widget is a Yii2 wrapper for the Twitter typeahead.js plugin. This
@@ -32,31 +33,18 @@ use yii\web\JsExpression;
  */
 class Typeahead extends TypeaheadBasic
 {
-
-    /**
-     * @var array dataset an object that defines a set of data that hydrates suggestions.
-     * It consists of the following special variable settings:
-     * - local: array configuration for the [[local]] list of datums. You must set one of
-     *   [[local]], [[prefetch]], or [[remote]].
-     * - displayKey: string the key used to access the value of the datum in the datum
-     *   object. Defaults to 'value'.
-     * - prefetch: array configuration for the [[prefetch]] options object.
-     * - remote: array configuration for the [[remote]] options object.
-     * - limit: integer the max number of suggestions from the dataset to display for
-     *   a given query. Defaults to 8.
-     * - dupDetector: JsExpression, a function with the signature (remoteMatch, localMatch) that returns
-     *   true if the datums are duplicates or false otherwise. If not set, duplicate detection will not
-     *   be performed.
-     * - sorter – JsExpression, a compare function used to sort matched datums for a given query.
-     * - templates: array the templates used to render suggestions.
-     */
-    public $dataset = [];
-    
     /**
      * @var bool whether to register and use Handle Bars Template compiler plugin. 
      * Defaults to `true`.
      */
     public $useHandleBars = true;
+
+    /**
+     * @var array the list of default values/suggestions that will be displayed on init
+     * or when text queried is empty. This feature will be disabled if an empty array or
+     * invalid array is passed.
+     */
+    public $defaultSuggestions = [];
 
     /**
      * @var array the HTML attributes for the input tag.
@@ -72,6 +60,26 @@ class Typeahead extends TypeaheadBasic
      * @var string the generated Json encoded Dataset script
      */
     protected $_dataset;
+    
+    /**
+     * @var bool whether default suggestions are enabled
+     */
+    protected $_defaultSuggest = false;
+    
+    /**
+     * @var array the bloodhound settings variables
+     */
+    protected static $_bhSettings = [
+        'datumTokenizer',
+        'queryTokenizer',
+        'initalize',
+        'sufficient',
+        'sorter',
+        'identify',
+        'local',
+        'prefetch',
+        'remote'
+    ];
 
     /**
      * Runs the widget
@@ -86,6 +94,10 @@ class Typeahead extends TypeaheadBasic
         }
         if (!is_array(current($this->dataset))) {
             throw new InvalidConfigException("The 'dataset' array must contain an array of datums. Invalid data found.");
+        }
+        $this->_defaultSuggest = is_array($this->defaultSuggestions) && !empty($this->defaultSuggestions);
+        if ($this->_defaultSuggest) {
+            $this->pluginOptions['minLength'] = 0;
         }
         $this->validateConfig();
         $this->initDataset();
@@ -118,15 +130,19 @@ class Typeahead extends TypeaheadBasic
         $dataset = [];
         foreach ($this->dataset as $datum) {
             $dataVar = strtr(strtolower($this->options['id'] . '_data_' . $index), ['-' => '_']);
-            $this->_bloodhound .= "var {$dataVar} = new Bloodhound(" .
-                Json::encode($this->parseSource($datum)) . ");\n" .
-                "{$dataVar}.initialize();\n";
-            $d = ['name' => $dataVar, 'source' => new JsExpression($dataVar . '.ttAdapter()')];
-            if (!empty($datum['displayKey'])) {
-                $d['displayKey'] = $datum['displayKey'];
-            }
-            if (!empty($datum['templates'])) {
-                $d['templates'] = $datum['templates'];
+            $this->_bloodhound .= $this->parseSource($dataVar, $datum) . "\n";
+            $d = $datum;
+            $d['name'] = $dataVar;
+            if (empty($d['source'])) {
+                if ($this->_defaultSuggest) {
+                    $sug = Json::encode($this->defaultSuggestions);
+                    $sugVar = 'kvTypData_' . hash('crc32', $sug);
+                    $this->getView()->registerJs("var {$sugVar} = {$sug};", View::POS_HEAD);
+                    $source = "function(q,s){if(q===''){s({$dataVar}.get({$sugVar}));}else{{$dataVar}.search(q,s);}}";
+                } else {
+                    $source = "{$dataVar}.ttAdapter()";
+                }
+                $d['source'] = new JsExpression($source);
             }
             $dataset[] = $d;
             $index++;
@@ -135,57 +151,48 @@ class Typeahead extends TypeaheadBasic
     }
 
     /**
+     * Parses a variable and force converts it to JsExpression
+     * @param mixed $expr
+     * @return JsExpression
+     */
+    protected static function parseJsExpr($expr)
+    {
+        return ($expr instanceof JsExpression) ? $expr : new JsExpression($expr);
+    }
+    
+    /**
      * Parses the data source array and prepares the bloodhound configuration
      *
+     * @param string $dataVar the variable to store the Bloodhound instance
      * @param array $source the source data
-     * @return array parsed formatted source
+     * @return string the prepared bloodhound configuration
      */
-    protected function parseSource($source = [])
+    protected function parseSource($dataVar, &$source)
     {
-        $key = ArrayHelper::getValue($source, 'displayKey', 'value');
-        $datumTokenizer = ArrayHelper::remove($source, 'datumTokenizer', new JsExpression("Bloodhound.tokenizers.obj.whitespace('{$key}')"));
-        if (!$datumTokenizer instanceof JsExpression) {
-            $datumTokenizer = new JsExpression($datumTokenizer);
-        }
-        $queryTokenizer = ArrayHelper::remove($source, 'queryTokenizer', new JsExpression('Bloodhound.tokenizers.whitespace'));
-        if (!$queryTokenizer instanceof JsExpression) {
-            $queryTokenizer = new JsExpression($queryTokenizer);
-        }
-        $limit = ArrayHelper::remove($source, 'limit', 8);
-        if (!is_numeric($limit)) {
-            $limit = 8;
-        }
-        if (!empty($source['dupDetector']) && !$source['dupDetector'] instanceof JsExpression) {
-            $dupDetector = new JsExpression($source['dupDetector']);
-        }
-        if (!empty($source['sorter']) && !$source['sorter'] instanceof JsExpression) {
-            $sorter = new JsExpression($source['sorter']);
-        }
-        if (!empty($source['local']) && is_array($source['local'])) {
-            $local = new JsExpression('$.map(' . Json::encode(array_values($source['local'])) . ", function(v){ return{{$key}:v}; })");
-        } elseif (!empty($source['local'])) {
-            $local = ($source['local'] instanceof JsExpression) ? $source['local'] : new JsExpression($source['local']);
-        }
-        if (!empty($source['prefetch'])) {
-            $prefetch = $source['prefetch'];
-            if (!is_array($prefetch)) {
-                $prefetch = ['url' => $prefetch];
+        $out = [];
+        $defaultToken = new JsExpression("Bloodhound.tokenizers.whitespace");
+        foreach (self::$_bhSettings as $key) {
+            if ($key === 'datumTokenizer' || $key === 'queryTokenizer') {
+                $out[$key] = self::parseJsExpr(ArrayHelper::remove($source, $key, $defaultToken));
+            }
+            if (isset($source[$key])) {
+                $out[$key] = $source[$key];
+                if ($key === 'local') {
+                    $local = Json::encode($source[$key]);
+                    $localVar = 'kvTypData_' . hash('crc32', $local);
+                    $this->getView()->registerJs("var {$localVar} = {$local};", View::POS_HEAD);
+                    $out[$key] = new JsExpression($localVar);
+                } elseif ($key === 'prefetch') {
+                    $prefetch = $source[$key];
+                    if (!is_array($prefetch)) {
+                        $prefetch = ['url' => $prefetch];
+                    }
+                    $out[$key] = $prefetch;
+                }
+                unset($source[$key]);
             }
         }
-        if (!empty($source['remote'])) {
-            $remote = $source['remote'];
-            $hint = 'jQuery("#' . $this->options['id'] . '")';
-            /* Add a spinning indicator for remote calls */
-            $r = is_array($remote) ? $remote : ['url' => $remote];
-            if (empty($r['ajax']['beforeSend'])) {
-                $r['ajax']['beforeSend'] = new JsExpression("function(){{$hint}.addClass('loading');}");
-            }
-            if (empty($r['ajax']['complete'])) {
-               $r['ajax']['complete'] = new JsExpression("function(){{$hint}.removeClass('loading');}");
-            }
-            $remote = $r;
-        }
-        return compact('datumTokenizer', 'queryTokenizer', 'limit', 'dupDetector', 'sorter', 'local', 'prefetch', 'remote');
+        return "var {$dataVar} = new Bloodhound(" . Json::encode($out) . ");";
     }
 
     /**
@@ -199,8 +206,8 @@ class Typeahead extends TypeaheadBasic
             TypeaheadHBAsset::register($view);
         }
         $this->registerPluginOptions('typeahead');
-        $view->registerJs($this->_bloodhound);
-        $view->registerJs('jQuery("#' . $this->options['id'] . '").typeahead(' . $this->_hashVar . ',' . $this->_dataset . ');');
+        $id = $this->options['id'];
+        $view->registerJs("{$this->_bloodhound}kvInitTA('{$id}', {$this->_hashVar}, {$this->_dataset});");
         $this->registerPluginEvents($view);
     }
 }
