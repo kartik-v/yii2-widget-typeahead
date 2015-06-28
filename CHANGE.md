@@ -1,6 +1,6 @@
 version 1.0.1
 =============
-**Date:** 16-Jun-2015
+**Date:** 28-Jun-2015
 
 - (enh #5): Implement default suggestions feature.
 - (enh #6): Update to latest release v0.11.1 of typeahead.js plugin.
@@ -11,6 +11,7 @@ version 1.0.1
     - Bootstrap styling enhancements
     - New enhanced custom javascript methods in `typeahead-kv.js` - (`kvInitTA` and `kvSubstringMatcher`).
     - Include ability to show loading indicator for ajax / remote requests.
+- (enh #8): Fix plugin for typeahead hints.
 
 version 1.0.0
 =============
