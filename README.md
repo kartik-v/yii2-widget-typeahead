@@ -53,7 +53,7 @@ use kartik\typeahead\TypeaheadBasic;
 use kartik\typeahead\Typeahead;
 
 // TypeaheadBasic usage with ActiveForm and model
-echo $form->field($model, 'state_3')->widget(Typeahead::classname(), [
+echo $form->field($model, 'state_3')->widget(TypeaheadBasic::classname(), [
 	'data' => $data,
     'pluginOptions' => ['highlight' => true],
 	'options' => ['placeholder' => 'Filter as you type ...'],
