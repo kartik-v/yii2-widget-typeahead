@@ -1,10 +1,10 @@
 <?php
 
 /**
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2017
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
- * @version 1.0.1
+ * @version 1.0.2
  */
 
 namespace kartik\typeahead;
@@ -137,7 +137,7 @@ class Typeahead extends TypeaheadBasic
                 if ($this->_defaultSuggest) {
                     $sug = Json::encode($this->defaultSuggestions);
                     $sugVar = 'kvTypData_' . hash('crc32', $sug);
-                    $this->getView()->registerJs("var {$sugVar} = {$sug};", View::POS_HEAD);
+                    $this->getView()->registerJs("var {$sugVar} = {$sug};", $this->hashVarLoadPosition);
                     $source = "function(q,s){if(q===''){s({$dataVar}.get({$sugVar}));}else{{$dataVar}.search(q,s);}}";
                 } else {
                     $source = "{$dataVar}.ttAdapter()";
@@ -180,7 +180,7 @@ class Typeahead extends TypeaheadBasic
                 if ($key === 'local') {
                     $local = Json::encode($source[$key]);
                     $localVar = 'kvTypData_' . hash('crc32', $local);
-                    $this->getView()->registerJs("var {$localVar} = {$local};", View::POS_HEAD);
+                    $this->getView()->registerJs("var {$localVar} = {$local};", $this->hashVarLoadPosition);
                     $out[$key] = new JsExpression($localVar);
                 } elseif ($key === 'prefetch') {
                     $prefetch = $source[$key];

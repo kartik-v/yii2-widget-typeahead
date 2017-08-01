@@ -1,15 +1,16 @@
 <?php
 
 /**
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2015
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2017
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
- * @version 1.0.1
+ * @version 1.0.2
 
  */
 
 namespace kartik\typeahead;
 
+use kartik\base\InputWidget;
 use yii\web\JsExpression;
 use yii\helpers\Json;
 use yii\helpers\Html;
@@ -29,7 +30,7 @@ use yii\web\View;
  * @since 1.0
  * @see http://twitter.github.com/typeahead.js/examples
  */
-class TypeaheadBasic extends \kartik\base\InputWidget
+class TypeaheadBasic extends InputWidget
 {
     /**
      * @var bool whether the dropdown menu is scrollable
@@ -136,7 +137,7 @@ class TypeaheadBasic extends \kartik\base\InputWidget
         $this->registerPluginOptions('typeahead');
         $data = Json::encode(array_values($this->data));
         $dataVar = 'kvTypData_' . hash('crc32', $data);
-        $view->registerJs("var {$dataVar} = {$data};", View::POS_HEAD);
+        $view->registerJs("var {$dataVar} = {$data};", $this->hashVarLoadPosition);
         $this->dataset['name'] = $dataVar;
         if (!isset($this->dataset['source'])) {
             $this->dataset['source'] = new JsExpression('kvSubstringMatcher(' . $dataVar . ')');
