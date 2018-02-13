@@ -89,7 +89,7 @@ class Typeahead extends TypeaheadBasic
      */
     public function run()
     {
-        if (empty($this->dataset) || !is_array($this->dataset)) {
+        if (!is_array($this->dataset)) {
             throw new InvalidConfigException("You must define the 'dataset' property for Typeahead which must be an array.");
         }
         if (!is_array(current($this->dataset))) {
