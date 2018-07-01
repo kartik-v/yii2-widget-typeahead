@@ -85,7 +85,7 @@ class TypeaheadBasic extends InputWidget
      */
     public function run()
     {
-        if (empty($this->data) || !is_array($this->data)) {
+        if (!is_array($this->data)) {
             throw new InvalidConfigException("You must define the 'data' property for Typeahead which must be a single dimensional array.");
         }
         $this->registerAssets();
