@@ -33,6 +33,9 @@ use yii\web\View;
  */
 class Typeahead extends TypeaheadBasic
 {
+    const INPUT_TEXTINPUT = 'textInput';
+    const INPUT_TEXTAREA = 'textarea';
+    
     /**
      * @var bool whether to register and use Handle Bars Template compiler plugin. 
      * Defaults to `true`.
@@ -95,6 +98,9 @@ class Typeahead extends TypeaheadBasic
         if (!is_array(current($this->dataset))) {
             throw new InvalidConfigException("The 'dataset' array must contain an array of datums. Invalid data found.");
         }
+        if(!$this->inputType || !in_array($this->inputType, [self::INPUT_TEXTAREA, self::INPUT_TEXTINPUT])) {
+            $this->inputType = self::INPUT_TEXTINPUT;
+        }
         $this->_defaultSuggest = is_array($this->defaultSuggestions) && !empty($this->defaultSuggestions);
         if ($this->_defaultSuggest) {
             $this->pluginOptions['minLength'] = 0;
@@ -103,7 +109,7 @@ class Typeahead extends TypeaheadBasic
         $this->initDataset();
         $this->registerAssets();
         $this->initOptions();
-        echo Html::tag('div', $this->getInput('textInput'), $this->container);
+        echo Html::tag('div', $this->getInput($this->inputType), $this->container);
     }
 
     /**
