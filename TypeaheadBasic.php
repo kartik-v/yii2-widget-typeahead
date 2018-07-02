@@ -99,6 +99,7 @@ class TypeaheadBasic extends InputWidget
     protected function initOptions()
     {
         Html::addCssClass($this->options, 'form-control');
+        Html::addCssClass($this->container, 'typeahead-container');
         if ($this->scrollable) {
             Html::addCssClass($this->container, 'tt-scrollable-menu');
         }
