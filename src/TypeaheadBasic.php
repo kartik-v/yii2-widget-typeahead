@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2017
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2018
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
  * @version 1.0.2
@@ -32,6 +32,14 @@ use yii\web\View;
  */
 class TypeaheadBasic extends InputWidget
 {
+    const INPUT_TEXTINPUT = 'textInput';
+    const INPUT_TEXTAREA = 'textarea';
+    
+    /**
+     * @var string the input type on which the typeahead widget will be initialized
+     */
+    public $inputType = self::INPUT_TEXTINPUT;
+
     /**
      * @var bool whether the dropdown menu is scrollable
      */
@@ -76,6 +84,11 @@ class TypeaheadBasic extends InputWidget
      * @var array the HTML attributes for container enclosing the input
      */
     public $container = [];
+    
+    /**
+     * @var array list of allowed input types
+     */
+    protected $_allowedInputTypes = [self::INPUT_TEXTINPUT, self::INPUT_TEXTAREA];
 
     /**
      * Runs the widget
@@ -90,7 +103,7 @@ class TypeaheadBasic extends InputWidget
         }
         $this->registerAssets();
         $this->initOptions();
-        echo Html::tag('div', $this->getInput('textInput'), $this->container);
+        echo Html::tag('div', $this->getInput($this->inputType), $this->container);
     }
 
     /**
@@ -98,6 +111,9 @@ class TypeaheadBasic extends InputWidget
      */
     protected function initOptions()
     {
+        if (!in_array($this->inputType, $this->_allowedInputTypes)) {
+            $this->inputType = self::INPUT_TEXTINPUT;
+        }
         Html::addCssClass($this->options, 'form-control');
         if ($this->scrollable) {
             Html::addCssClass($this->container, 'tt-scrollable-menu');
@@ -110,10 +126,8 @@ class TypeaheadBasic extends InputWidget
 
     /**
      * Registers plugin events
-     *
-     * @param View $view The View object
      */
-    protected function registerPluginEvents($view)
+    protected function registerPluginEvents()
     {
         if (!empty($this->pluginEvents)) {
             $id = 'jQuery("#' . $this->options['id'] . '")';
@@ -123,7 +137,7 @@ class TypeaheadBasic extends InputWidget
                 $js[] = "{$id}.on('{$event}', {$function});";
             }
             $js = implode("\n", $js);
-            $view->registerJs($js);
+            $this->registerWidgetJs($js);
         }
     }
 
@@ -145,7 +159,7 @@ class TypeaheadBasic extends InputWidget
         $id = 'jQuery("#' . $this->options['id'] . '")';
         $dataset = Json::encode($this->dataset);
         $js = "{$id}.typeahead({$this->_hashVar}, {$dataset});";
-        $view->registerJs($js);
-        $this->registerPluginEvents($view);
+        $this->registerWidgetJs($js);
+        $this->registerPluginEvents();
     }
 }

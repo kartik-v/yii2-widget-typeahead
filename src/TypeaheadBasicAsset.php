@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2017
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2018
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
  * @version 1.0.2
@@ -12,12 +12,12 @@ namespace kartik\typeahead;
 use kartik\base\AssetBundle;
 
 /**
- * Asset bundle for Typeahead Handle Bars plugin
+ * Asset bundle for Typeahead Widget (Basic)
  *
  * @author Kartik Visweswaran <kartikv2@gmail.com>
  * @since 1.0
  */
-class TypeaheadHBAsset extends AssetBundle
+class TypeaheadBasicAsset extends AssetBundle
 {
     /**
      * @inheritdoc
@@ -25,7 +25,8 @@ class TypeaheadHBAsset extends AssetBundle
     public function init()
     {
         $this->setSourcePath(__DIR__ . '/assets');
-        $this->setupAssets('js', ['js/handlebars']);
+        $this->setupAssets('css', ['css/typeahead', 'css/typeahead-kv']);
+        $this->setupAssets('js', ['js/typeahead.jquery', 'js/typeahead-kv']);
         parent::init();
     }
 }

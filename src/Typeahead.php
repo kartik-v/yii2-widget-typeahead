@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2017
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2018
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
  * @version 1.0.2
@@ -103,7 +103,7 @@ class Typeahead extends TypeaheadBasic
         $this->initDataset();
         $this->registerAssets();
         $this->initOptions();
-        echo Html::tag('div', $this->getInput('textInput'), $this->container);
+        echo Html::tag('div', $this->getInput($this->inputType), $this->container);
     }
 
     /**
@@ -207,7 +207,7 @@ class Typeahead extends TypeaheadBasic
         }
         $this->registerPluginOptions('typeahead');
         $id = $this->options['id'];
-        $view->registerJs("{$this->_bloodhound}kvInitTA('{$id}', {$this->_hashVar}, {$this->_dataset});");
+        $this->registerWidgetJs("{$this->_bloodhound}kvInitTA('{$id}', {$this->_hashVar}, {$this->_dataset});");
         $this->registerPluginEvents($view);
     }
 }

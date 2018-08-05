@@ -3,9 +3,14 @@ Change Log: `yii2-widget-typeahead`
 
 ## Version 1.0.2
 
-**Date:** 01-Aug-2017
+**Date:** 05-Aug-2018
 
 - (enh #26): Update composer dependency for `yii2-krajee-base`.
+- Update Handlebars js assets to latest release v4.1.1.
+- (enh #21): Update typeahead js assets to latest release from fork `corejavascript/typeahead`.
+- Better initialization of JS for PJAX scenario.
+- Reorganize source code in `src` directory.
+- (enh #20): Allow configuration of input type with new property `TypeAheadBasic::inputType`.
 - Add composer branch alias for latest dev-master release.
 - Add github contribution and PR log templates.
 - (enh #9): Fix documentation typo.

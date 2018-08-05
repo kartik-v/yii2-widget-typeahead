@@ -1,931 +1,18 @@
 /*!
- * typeahead.js 0.11.1
+ * typeahead.js 1.2.0
  * https://github.com/twitter/typeahead.js
- * Copyright 2013-2015 Twitter, Inc. and other contributors; Licensed MIT
+ * Copyright 2013-2017 Twitter, Inc. and other contributors; Licensed MIT
  */
 
 (function(root, factory) {
     if (typeof define === "function" && define.amd) {
-        define("bloodhound", [ "jquery" ], function(a0) {
-            return root["Bloodhound"] = factory(a0);
-        });
-    } else if (typeof exports === "object") {
-        module.exports = factory(require("jquery"));
-    } else {
-        root["Bloodhound"] = factory(jQuery);
-    }
-})(this, function($) {
-    var _ = function() {
-        "use strict";
-        return {
-            isMsie: function() {
-                return /(msie|trident)/i.test(navigator.userAgent) ? navigator.userAgent.match(/(msie |rv:)(\d+(.\d+)?)/i)[2] : false;
-            },
-            isBlankString: function(str) {
-                return !str || /^\s*$/.test(str);
-            },
-            escapeRegExChars: function(str) {
-                return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-            },
-            isString: function(obj) {
-                return typeof obj === "string";
-            },
-            isNumber: function(obj) {
-                return typeof obj === "number";
-            },
-            isArray: $.isArray,
-            isFunction: $.isFunction,
-            isObject: $.isPlainObject,
-            isUndefined: function(obj) {
-                return typeof obj === "undefined";
-            },
-            isElement: function(obj) {
-                return !!(obj && obj.nodeType === 1);
-            },
-            isJQuery: function(obj) {
-                return obj instanceof $;
-            },
-            toStr: function toStr(s) {
-                return _.isUndefined(s) || s === null ? "" : s + "";
-            },
-            bind: $.proxy,
-            each: function(collection, cb) {
-                $.each(collection, reverseArgs);
-                function reverseArgs(index, value) {
-                    return cb(value, index);
-                }
-            },
-            map: $.map,
-            filter: $.grep,
-            every: function(obj, test) {
-                var result = true;
-                if (!obj) {
-                    return result;
-                }
-                $.each(obj, function(key, val) {
-                    if (!(result = test.call(null, val, key, obj))) {
-                        return false;
-                    }
-                });
-                return !!result;
-            },
-            some: function(obj, test) {
-                var result = false;
-                if (!obj) {
-                    return result;
-                }
-                $.each(obj, function(key, val) {
-                    if (result = test.call(null, val, key, obj)) {
-                        return false;
-                    }
-                });
-                return !!result;
-            },
-            mixin: $.extend,
-            identity: function(x) {
-                return x;
-            },
-            clone: function(obj) {
-                return $.extend(true, {}, obj);
-            },
-            getIdGenerator: function() {
-                var counter = 0;
-                return function() {
-                    return counter++;
-                };
-            },
-            templatify: function templatify(obj) {
-                return $.isFunction(obj) ? obj : template;
-                function template() {
-                    return String(obj);
-                }
-            },
-            defer: function(fn) {
-                setTimeout(fn, 0);
-            },
-            debounce: function(func, wait, immediate) {
-                var timeout, result;
-                return function() {
-                    var context = this, args = arguments, later, callNow;
-                    later = function() {
-                        timeout = null;
-                        if (!immediate) {
-                            result = func.apply(context, args);
-                        }
-                    };
-                    callNow = immediate && !timeout;
-                    clearTimeout(timeout);
-                    timeout = setTimeout(later, wait);
-                    if (callNow) {
-                        result = func.apply(context, args);
-                    }
-                    return result;
-                };
-            },
-            throttle: function(func, wait) {
-                var context, args, timeout, result, previous, later;
-                previous = 0;
-                later = function() {
-                    previous = new Date();
-                    timeout = null;
-                    result = func.apply(context, args);
-                };
-                return function() {
-                    var now = new Date(), remaining = wait - (now - previous);
-                    context = this;
-                    args = arguments;
-                    if (remaining <= 0) {
-                        clearTimeout(timeout);
-                        timeout = null;
-                        previous = now;
-                        result = func.apply(context, args);
-                    } else if (!timeout) {
-                        timeout = setTimeout(later, remaining);
-                    }
-                    return result;
-                };
-            },
-            stringify: function(val) {
-                return _.isString(val) ? val : JSON.stringify(val);
-            },
-            noop: function() {}
-        };
-    }();
-    var VERSION = "0.11.1";
-    var tokenizers = function() {
-        "use strict";
-        return {
-            nonword: nonword,
-            whitespace: whitespace,
-            obj: {
-                nonword: getObjTokenizer(nonword),
-                whitespace: getObjTokenizer(whitespace)
-            }
-        };
-        function whitespace(str) {
-            str = _.toStr(str);
-            return str ? str.split(/\s+/) : [];
-        }
-        function nonword(str) {
-            str = _.toStr(str);
-            return str ? str.split(/\W+/) : [];
-        }
-        function getObjTokenizer(tokenizer) {
-            return function setKey(keys) {
-                keys = _.isArray(keys) ? keys : [].slice.call(arguments, 0);
-                return function tokenize(o) {
-                    var tokens = [];
-                    _.each(keys, function(k) {
-                        tokens = tokens.concat(tokenizer(_.toStr(o[k])));
-                    });
-                    return tokens;
-                };
-            };
-        }
-    }();
-    var LruCache = function() {
-        "use strict";
-        function LruCache(maxSize) {
-            this.maxSize = _.isNumber(maxSize) ? maxSize : 100;
-            this.reset();
-            if (this.maxSize <= 0) {
-                this.set = this.get = $.noop;
-            }
-        }
-        _.mixin(LruCache.prototype, {
-            set: function set(key, val) {
-                var tailItem = this.list.tail, node;
-                if (this.size >= this.maxSize) {
-                    this.list.remove(tailItem);
-                    delete this.hash[tailItem.key];
-                    this.size--;
-                }
-                if (node = this.hash[key]) {
-                    node.val = val;
-                    this.list.moveToFront(node);
-                } else {
-                    node = new Node(key, val);
-                    this.list.add(node);
-                    this.hash[key] = node;
-                    this.size++;
-                }
-            },
-            get: function get(key) {
-                var node = this.hash[key];
-                if (node) {
-                    this.list.moveToFront(node);
-                    return node.val;
-                }
-            },
-            reset: function reset() {
-                this.size = 0;
-                this.hash = {};
-                this.list = new List();
-            }
-        });
-        function List() {
-            this.head = this.tail = null;
-        }
-        _.mixin(List.prototype, {
-            add: function add(node) {
-                if (this.head) {
-                    node.next = this.head;
-                    this.head.prev = node;
-                }
-                this.head = node;
-                this.tail = this.tail || node;
-            },
-            remove: function remove(node) {
-                node.prev ? node.prev.next = node.next : this.head = node.next;
-                node.next ? node.next.prev = node.prev : this.tail = node.prev;
-            },
-            moveToFront: function(node) {
-                this.remove(node);
-                this.add(node);
-            }
-        });
-        function Node(key, val) {
-            this.key = key;
-            this.val = val;
-            this.prev = this.next = null;
-        }
-        return LruCache;
-    }();
-    var PersistentStorage = function() {
-        "use strict";
-        var LOCAL_STORAGE;
-        try {
-            LOCAL_STORAGE = window.localStorage;
-            LOCAL_STORAGE.setItem("~~~", "!");
-            LOCAL_STORAGE.removeItem("~~~");
-        } catch (err) {
-            LOCAL_STORAGE = null;
-        }
-        function PersistentStorage(namespace, override) {
-            this.prefix = [ "__", namespace, "__" ].join("");
-            this.ttlKey = "__ttl__";
-            this.keyMatcher = new RegExp("^" + _.escapeRegExChars(this.prefix));
-            this.ls = override || LOCAL_STORAGE;
-            !this.ls && this._noop();
-        }
-        _.mixin(PersistentStorage.prototype, {
-            _prefix: function(key) {
-                return this.prefix + key;
-            },
-            _ttlKey: function(key) {
-                return this._prefix(key) + this.ttlKey;
-            },
-            _noop: function() {
-                this.get = this.set = this.remove = this.clear = this.isExpired = _.noop;
-            },
-            _safeSet: function(key, val) {
-                try {
-                    this.ls.setItem(key, val);
-                } catch (err) {
-                    if (err.name === "QuotaExceededError") {
-                        this.clear();
-                        this._noop();
-                    }
-                }
-            },
-            get: function(key) {
-                if (this.isExpired(key)) {
-                    this.remove(key);
-                }
-                return decode(this.ls.getItem(this._prefix(key)));
-            },
-            set: function(key, val, ttl) {
-                if (_.isNumber(ttl)) {
-                    this._safeSet(this._ttlKey(key), encode(now() + ttl));
-                } else {
-                    this.ls.removeItem(this._ttlKey(key));
-                }
-                return this._safeSet(this._prefix(key), encode(val));
-            },
-            remove: function(key) {
-                this.ls.removeItem(this._ttlKey(key));
-                this.ls.removeItem(this._prefix(key));
-                return this;
-            },
-            clear: function() {
-                var i, keys = gatherMatchingKeys(this.keyMatcher);
-                for (i = keys.length; i--; ) {
-                    this.remove(keys[i]);
-                }
-                return this;
-            },
-            isExpired: function(key) {
-                var ttl = decode(this.ls.getItem(this._ttlKey(key)));
-                return _.isNumber(ttl) && now() > ttl ? true : false;
-            }
-        });
-        return PersistentStorage;
-        function now() {
-            return new Date().getTime();
-        }
-        function encode(val) {
-            return JSON.stringify(_.isUndefined(val) ? null : val);
-        }
-        function decode(val) {
-            return $.parseJSON(val);
-        }
-        function gatherMatchingKeys(keyMatcher) {
-            var i, key, keys = [], len = LOCAL_STORAGE.length;
-            for (i = 0; i < len; i++) {
-                if ((key = LOCAL_STORAGE.key(i)).match(keyMatcher)) {
-                    keys.push(key.replace(keyMatcher, ""));
-                }
-            }
-            return keys;
-        }
-    }();
-    var Transport = function() {
-        "use strict";
-        var pendingRequestsCount = 0, pendingRequests = {}, maxPendingRequests = 6, sharedCache = new LruCache(10);
-        function Transport(o) {
-            o = o || {};
-            this.cancelled = false;
-            this.lastReq = null;
-            this._send = o.transport;
-            this._get = o.limiter ? o.limiter(this._get) : this._get;
-            this._cache = o.cache === false ? new LruCache(0) : sharedCache;
-        }
-        Transport.setMaxPendingRequests = function setMaxPendingRequests(num) {
-            maxPendingRequests = num;
-        };
-        Transport.resetCache = function resetCache() {
-            sharedCache.reset();
-        };
-        _.mixin(Transport.prototype, {
-            _fingerprint: function fingerprint(o) {
-                o = o || {};
-                return o.url + o.type + $.param(o.data || {});
-            },
-            _get: function(o, cb) {
-                var that = this, fingerprint, jqXhr;
-                fingerprint = this._fingerprint(o);
-                if (this.cancelled || fingerprint !== this.lastReq) {
-                    return;
-                }
-                if (jqXhr = pendingRequests[fingerprint]) {
-                    jqXhr.done(done).fail(fail);
-                } else if (pendingRequestsCount < maxPendingRequests) {
-                    pendingRequestsCount++;
-                    pendingRequests[fingerprint] = this._send(o).done(done).fail(fail).always(always);
-                } else {
-                    this.onDeckRequestArgs = [].slice.call(arguments, 0);
-                }
-                function done(resp) {
-                    cb(null, resp);
-                    that._cache.set(fingerprint, resp);
-                }
-                function fail() {
-                    cb(true);
-                }
-                function always() {
-                    pendingRequestsCount--;
-                    delete pendingRequests[fingerprint];
-                    if (that.onDeckRequestArgs) {
-                        that._get.apply(that, that.onDeckRequestArgs);
-                        that.onDeckRequestArgs = null;
-                    }
-                }
-            },
-            get: function(o, cb) {
-                var resp, fingerprint;
-                cb = cb || $.noop;
-                o = _.isString(o) ? {
-                    url: o
-                } : o || {};
-                fingerprint = this._fingerprint(o);
-                this.cancelled = false;
-                this.lastReq = fingerprint;
-                if (resp = this._cache.get(fingerprint)) {
-                    cb(null, resp);
-                } else {
-                    this._get(o, cb);
-                }
-            },
-            cancel: function() {
-                this.cancelled = true;
-            }
-        });
-        return Transport;
-    }();
-    var SearchIndex = window.SearchIndex = function() {
-        "use strict";
-        var CHILDREN = "c", IDS = "i";
-        function SearchIndex(o) {
-            o = o || {};
-            if (!o.datumTokenizer || !o.queryTokenizer) {
-                $.error("datumTokenizer and queryTokenizer are both required");
-            }
-            this.identify = o.identify || _.stringify;
-            this.datumTokenizer = o.datumTokenizer;
-            this.queryTokenizer = o.queryTokenizer;
-            this.reset();
-        }
-        _.mixin(SearchIndex.prototype, {
-            bootstrap: function bootstrap(o) {
-                this.datums = o.datums;
-                this.trie = o.trie;
-            },
-            add: function(data) {
-                var that = this;
-                data = _.isArray(data) ? data : [ data ];
-                _.each(data, function(datum) {
-                    var id, tokens;
-                    that.datums[id = that.identify(datum)] = datum;
-                    tokens = normalizeTokens(that.datumTokenizer(datum));
-                    _.each(tokens, function(token) {
-                        var node, chars, ch;
-                        node = that.trie;
-                        chars = token.split("");
-                        while (ch = chars.shift()) {
-                            node = node[CHILDREN][ch] || (node[CHILDREN][ch] = newNode());
-                            node[IDS].push(id);
-                        }
-                    });
-                });
-            },
-            get: function get(ids) {
-                var that = this;
-                return _.map(ids, function(id) {
-                    return that.datums[id];
-                });
-            },
-            search: function search(query) {
-                var that = this, tokens, matches;
-                tokens = normalizeTokens(this.queryTokenizer(query));
-                _.each(tokens, function(token) {
-                    var node, chars, ch, ids;
-                    if (matches && matches.length === 0) {
-                        return false;
-                    }
-                    node = that.trie;
-                    chars = token.split("");
-                    while (node && (ch = chars.shift())) {
-                        node = node[CHILDREN][ch];
-                    }
-                    if (node && chars.length === 0) {
-                        ids = node[IDS].slice(0);
-                        matches = matches ? getIntersection(matches, ids) : ids;
-                    } else {
-                        matches = [];
-                        return false;
-                    }
-                });
-                return matches ? _.map(unique(matches), function(id) {
-                    return that.datums[id];
-                }) : [];
-            },
-            all: function all() {
-                var values = [];
-                for (var key in this.datums) {
-                    values.push(this.datums[key]);
-                }
-                return values;
-            },
-            reset: function reset() {
-                this.datums = {};
-                this.trie = newNode();
-            },
-            serialize: function serialize() {
-                return {
-                    datums: this.datums,
-                    trie: this.trie
-                };
-            }
-        });
-        return SearchIndex;
-        function normalizeTokens(tokens) {
-            tokens = _.filter(tokens, function(token) {
-                return !!token;
-            });
-            tokens = _.map(tokens, function(token) {
-                return token.toLowerCase();
-            });
-            return tokens;
-        }
-        function newNode() {
-            var node = {};
-            node[IDS] = [];
-            node[CHILDREN] = {};
-            return node;
-        }
-        function unique(array) {
-            var seen = {}, uniques = [];
-            for (var i = 0, len = array.length; i < len; i++) {
-                if (!seen[array[i]]) {
-                    seen[array[i]] = true;
-                    uniques.push(array[i]);
-                }
-            }
-            return uniques;
-        }
-        function getIntersection(arrayA, arrayB) {
-            var ai = 0, bi = 0, intersection = [];
-            arrayA = arrayA.sort();
-            arrayB = arrayB.sort();
-            var lenArrayA = arrayA.length, lenArrayB = arrayB.length;
-            while (ai < lenArrayA && bi < lenArrayB) {
-                if (arrayA[ai] < arrayB[bi]) {
-                    ai++;
-                } else if (arrayA[ai] > arrayB[bi]) {
-                    bi++;
-                } else {
-                    intersection.push(arrayA[ai]);
-                    ai++;
-                    bi++;
-                }
-            }
-            return intersection;
-        }
-    }();
-    var Prefetch = function() {
-        "use strict";
-        var keys;
-        keys = {
-            data: "data",
-            protocol: "protocol",
-            thumbprint: "thumbprint"
-        };
-        function Prefetch(o) {
-            this.url = o.url;
-            this.ttl = o.ttl;
-            this.cache = o.cache;
-            this.prepare = o.prepare;
-            this.transform = o.transform;
-            this.transport = o.transport;
-            this.thumbprint = o.thumbprint;
-            this.storage = new PersistentStorage(o.cacheKey);
-        }
-        _.mixin(Prefetch.prototype, {
-            _settings: function settings() {
-                return {
-                    url: this.url,
-                    type: "GET",
-                    dataType: "json"
-                };
-            },
-            store: function store(data) {
-                if (!this.cache) {
-                    return;
-                }
-                this.storage.set(keys.data, data, this.ttl);
-                this.storage.set(keys.protocol, location.protocol, this.ttl);
-                this.storage.set(keys.thumbprint, this.thumbprint, this.ttl);
-            },
-            fromCache: function fromCache() {
-                var stored = {}, isExpired;
-                if (!this.cache) {
-                    return null;
-                }
-                stored.data = this.storage.get(keys.data);
-                stored.protocol = this.storage.get(keys.protocol);
-                stored.thumbprint = this.storage.get(keys.thumbprint);
-                isExpired = stored.thumbprint !== this.thumbprint || stored.protocol !== location.protocol;
-                return stored.data && !isExpired ? stored.data : null;
-            },
-            fromNetwork: function(cb) {
-                var that = this, settings;
-                if (!cb) {
-                    return;
-                }
-                settings = this.prepare(this._settings());
-                this.transport(settings).fail(onError).done(onResponse);
-                function onError() {
-                    cb(true);
-                }
-                function onResponse(resp) {
-                    cb(null, that.transform(resp));
-                }
-            },
-            clear: function clear() {
-                this.storage.clear();
-                return this;
-            }
-        });
-        return Prefetch;
-    }();
-    var Remote = function() {
-        "use strict";
-        function Remote(o) {
-            this.url = o.url;
-            this.prepare = o.prepare;
-            this.transform = o.transform;
-            this.transport = new Transport({
-                cache: o.cache,
-                limiter: o.limiter,
-                transport: o.transport
-            });
-        }
-        _.mixin(Remote.prototype, {
-            _settings: function settings() {
-                return {
-                    url: this.url,
-                    type: "GET",
-                    dataType: "json"
-                };
-            },
-            get: function get(query, cb) {
-                var that = this, settings;
-                if (!cb) {
-                    return;
-                }
-                query = query || "";
-                settings = this.prepare(query, this._settings());
-                return this.transport.get(settings, onResponse);
-                function onResponse(err, resp) {
-                    err ? cb([]) : cb(that.transform(resp));
-                }
-            },
-            cancelLastRequest: function cancelLastRequest() {
-                this.transport.cancel();
-            }
-        });
-        return Remote;
-    }();
-    var oParser = function() {
-        "use strict";
-        return function parse(o) {
-            var defaults, sorter;
-            defaults = {
-                initialize: true,
-                identify: _.stringify,
-                datumTokenizer: null,
-                queryTokenizer: null,
-                sufficient: 5,
-                sorter: null,
-                local: [],
-                prefetch: null,
-                remote: null
-            };
-            o = _.mixin(defaults, o || {});
-            !o.datumTokenizer && $.error("datumTokenizer is required");
-            !o.queryTokenizer && $.error("queryTokenizer is required");
-            sorter = o.sorter;
-            o.sorter = sorter ? function(x) {
-                return x.sort(sorter);
-            } : _.identity;
-            o.local = _.isFunction(o.local) ? o.local() : o.local;
-            o.prefetch = parsePrefetch(o.prefetch);
-            o.remote = parseRemote(o.remote);
-            return o;
-        };
-        function parsePrefetch(o) {
-            var defaults;
-            if (!o) {
-                return null;
-            }
-            defaults = {
-                url: null,
-                ttl: 24 * 60 * 60 * 1e3,
-                cache: true,
-                cacheKey: null,
-                thumbprint: "",
-                prepare: _.identity,
-                transform: _.identity,
-                transport: null
-            };
-            o = _.isString(o) ? {
-                url: o
-            } : o;
-            o = _.mixin(defaults, o);
-            !o.url && $.error("prefetch requires url to be set");
-            o.transform = o.filter || o.transform;
-            o.cacheKey = o.cacheKey || o.url;
-            o.thumbprint = VERSION + o.thumbprint;
-            o.transport = o.transport ? callbackToDeferred(o.transport) : $.ajax;
-            return o;
-        }
-        function parseRemote(o) {
-            var defaults;
-            if (!o) {
-                return;
-            }
-            defaults = {
-                url: null,
-                cache: true,
-                prepare: null,
-                replace: null,
-                wildcard: null,
-                limiter: null,
-                rateLimitBy: "debounce",
-                rateLimitWait: 300,
-                transform: _.identity,
-                transport: null
-            };
-            o = _.isString(o) ? {
-                url: o
-            } : o;
-            o = _.mixin(defaults, o);
-            !o.url && $.error("remote requires url to be set");
-            o.transform = o.filter || o.transform;
-            o.prepare = toRemotePrepare(o);
-            o.limiter = toLimiter(o);
-            o.transport = o.transport ? callbackToDeferred(o.transport) : $.ajax;
-            delete o.replace;
-            delete o.wildcard;
-            delete o.rateLimitBy;
-            delete o.rateLimitWait;
-            return o;
-        }
-        function toRemotePrepare(o) {
-            var prepare, replace, wildcard;
-            prepare = o.prepare;
-            replace = o.replace;
-            wildcard = o.wildcard;
-            if (prepare) {
-                return prepare;
-            }
-            if (replace) {
-                prepare = prepareByReplace;
-            } else if (o.wildcard) {
-                prepare = prepareByWildcard;
-            } else {
-                prepare = idenityPrepare;
-            }
-            return prepare;
-            function prepareByReplace(query, settings) {
-                settings.url = replace(settings.url, query);
-                return settings;
-            }
-            function prepareByWildcard(query, settings) {
-                settings.url = settings.url.replace(wildcard, encodeURIComponent(query));
-                return settings;
-            }
-            function idenityPrepare(query, settings) {
-                return settings;
-            }
-        }
-        function toLimiter(o) {
-            var limiter, method, wait;
-            limiter = o.limiter;
-            method = o.rateLimitBy;
-            wait = o.rateLimitWait;
-            if (!limiter) {
-                limiter = /^throttle$/i.test(method) ? throttle(wait) : debounce(wait);
-            }
-            return limiter;
-            function debounce(wait) {
-                return function debounce(fn) {
-                    return _.debounce(fn, wait);
-                };
-            }
-            function throttle(wait) {
-                return function throttle(fn) {
-                    return _.throttle(fn, wait);
-                };
-            }
-        }
-        function callbackToDeferred(fn) {
-            return function wrapper(o) {
-                var deferred = $.Deferred();
-                fn(o, onSuccess, onError);
-                return deferred;
-                function onSuccess(resp) {
-                    _.defer(function() {
-                        deferred.resolve(resp);
-                    });
-                }
-                function onError(err) {
-                    _.defer(function() {
-                        deferred.reject(err);
-                    });
-                }
-            };
-        }
-    }();
-    var Bloodhound = function() {
-        "use strict";
-        var old;
-        old = window && window.Bloodhound;
-        function Bloodhound(o) {
-            o = oParser(o);
-            this.sorter = o.sorter;
-            this.identify = o.identify;
-            this.sufficient = o.sufficient;
-            this.local = o.local;
-            this.remote = o.remote ? new Remote(o.remote) : null;
-            this.prefetch = o.prefetch ? new Prefetch(o.prefetch) : null;
-            this.index = new SearchIndex({
-                identify: this.identify,
-                datumTokenizer: o.datumTokenizer,
-                queryTokenizer: o.queryTokenizer
-            });
-            o.initialize !== false && this.initialize();
-        }
-        Bloodhound.noConflict = function noConflict() {
-            window && (window.Bloodhound = old);
-            return Bloodhound;
-        };
-        Bloodhound.tokenizers = tokenizers;
-        _.mixin(Bloodhound.prototype, {
-            __ttAdapter: function ttAdapter() {
-                var that = this;
-                return this.remote ? withAsync : withoutAsync;
-                function withAsync(query, sync, async) {
-                    return that.search(query, sync, async);
-                }
-                function withoutAsync(query, sync) {
-                    return that.search(query, sync);
-                }
-            },
-            _loadPrefetch: function loadPrefetch() {
-                var that = this, deferred, serialized;
-                deferred = $.Deferred();
-                if (!this.prefetch) {
-                    deferred.resolve();
-                } else if (serialized = this.prefetch.fromCache()) {
-                    this.index.bootstrap(serialized);
-                    deferred.resolve();
-                } else {
-                    this.prefetch.fromNetwork(done);
-                }
-                return deferred.promise();
-                function done(err, data) {
-                    if (err) {
-                        return deferred.reject();
-                    }
-                    that.add(data);
-                    that.prefetch.store(that.index.serialize());
-                    deferred.resolve();
-                }
-            },
-            _initialize: function initialize() {
-                var that = this, deferred;
-                this.clear();
-                (this.initPromise = this._loadPrefetch()).done(addLocalToIndex);
-                return this.initPromise;
-                function addLocalToIndex() {
-                    that.add(that.local);
-                }
-            },
-            initialize: function initialize(force) {
-                return !this.initPromise || force ? this._initialize() : this.initPromise;
-            },
-            add: function add(data) {
-                this.index.add(data);
-                return this;
-            },
-            get: function get(ids) {
-                ids = _.isArray(ids) ? ids : [].slice.call(arguments);
-                return this.index.get(ids);
-            },
-            search: function search(query, sync, async) {
-                var that = this, local;
-                local = this.sorter(this.index.search(query));
-                sync(this.remote ? local.slice() : local);
-                if (this.remote && local.length < this.sufficient) {
-                    this.remote.get(query, processRemote);
-                } else if (this.remote) {
-                    this.remote.cancelLastRequest();
-                }
-                return this;
-                function processRemote(remote) {
-                    var nonDuplicates = [];
-                    _.each(remote, function(r) {
-                        !_.some(local, function(l) {
-                            return that.identify(r) === that.identify(l);
-                        }) && nonDuplicates.push(r);
-                    });
-                    async && async(nonDuplicates);
-                }
-            },
-            all: function all() {
-                return this.index.all();
-            },
-            clear: function clear() {
-                this.index.reset();
-                return this;
-            },
-            clearPrefetchCache: function clearPrefetchCache() {
-                this.prefetch && this.prefetch.clear();
-                return this;
-            },
-            clearRemoteCache: function clearRemoteCache() {
-                Transport.resetCache();
-                return this;
-            },
-            ttAdapter: function ttAdapter() {
-                return this.__ttAdapter();
-            }
-        });
-        return Bloodhound;
-    }();
-    return Bloodhound;
-});
-
-(function(root, factory) {
-    if (typeof define === "function" && define.amd) {
-        define("typeahead.js", [ "jquery" ], function(a0) {
+        define([ "jquery" ], function(a0) {
             return factory(a0);
         });
     } else if (typeof exports === "object") {
         module.exports = factory(require("jquery"));
     } else {
-        factory(jQuery);
+        factory(root["jQuery"]);
     }
 })(this, function($) {
     var _ = function() {
@@ -1060,6 +147,13 @@
             },
             stringify: function(val) {
                 return _.isString(val) ? val : JSON.stringify(val);
+            },
+            guid: function() {
+                function _p8(s) {
+                    var p = (Math.random().toString(16) + "000000000").substr(2, 8);
+                    return s ? "-" + p.substr(0, 4) + "-" + p.substr(4, 4) : p;
+                }
+                return "tt-" + _p8() + _p8(true) + _p8(true) + _p8();
             },
             noop: function() {}
         };
@@ -1102,7 +196,7 @@
         function buildHtml(c) {
             return {
                 wrapper: '<span class="' + c.wrapper + '"></span>',
-                menu: '<div class="' + c.menu + '"></div>'
+                menu: '<div role="listbox" class="' + c.menu + '"></div>'
             };
         }
         function buildSelectors(classes) {
@@ -1177,10 +271,8 @@
         }
         _.mixin(EventBus.prototype, {
             _trigger: function(type, args) {
-                var $e;
-                $e = $.Event(namespace + type);
-                (args = args || []).unshift($e);
-                this.$el.trigger.apply(this.$el, args);
+                var $e = $.Event(namespace + type);
+                this.$el.trigger.call(this.$el, $e, args || []);
                 return $e;
             },
             before: function(type) {
@@ -1297,7 +389,36 @@
             tagName: "strong",
             className: null,
             wordsOnly: false,
-            caseSensitive: false
+            caseSensitive: false,
+            diacriticInsensitive: false
+        };
+        var accented = {
+            A: "[AaªÀ-Åà-åĀ-ąǍǎȀ-ȃȦȧᴬᵃḀḁẚẠ-ảₐ℀℁℻⒜Ⓐⓐ㍱-㍴㎀-㎄㎈㎉㎩-㎯㏂㏊㏟㏿Ａａ]",
+            B: "[BbᴮᵇḂ-ḇℬ⒝Ⓑⓑ㍴㎅-㎇㏃㏈㏔㏝Ｂｂ]",
+            C: "[CcÇçĆ-čᶜ℀ℂ℃℅℆ℭⅭⅽ⒞Ⓒⓒ㍶㎈㎉㎝㎠㎤㏄-㏇Ｃｃ]",
+            D: "[DdĎďǄ-ǆǱ-ǳᴰᵈḊ-ḓⅅⅆⅮⅾ⒟Ⓓⓓ㋏㍲㍷-㍹㎗㎭-㎯㏅㏈Ｄｄ]",
+            E: "[EeÈ-Ëè-ëĒ-ěȄ-ȇȨȩᴱᵉḘ-ḛẸ-ẽₑ℡ℯℰⅇ⒠Ⓔⓔ㉐㋍㋎Ｅｅ]",
+            F: "[FfᶠḞḟ℉ℱ℻⒡Ⓕⓕ㎊-㎌㎙ﬀ-ﬄＦｆ]",
+            G: "[GgĜ-ģǦǧǴǵᴳᵍḠḡℊ⒢Ⓖⓖ㋌㋍㎇㎍-㎏㎓㎬㏆㏉㏒㏿Ｇｇ]",
+            H: "[HhĤĥȞȟʰᴴḢ-ḫẖℋ-ℎ⒣Ⓗⓗ㋌㍱㎐-㎔㏊㏋㏗Ｈｈ]",
+            I: "[IiÌ-Ïì-ïĨ-İĲĳǏǐȈ-ȋᴵᵢḬḭỈ-ịⁱℐℑℹⅈⅠ-ⅣⅥ-ⅨⅪⅫⅰ-ⅳⅵ-ⅸⅺⅻ⒤Ⓘⓘ㍺㏌㏕ﬁﬃＩｉ]",
+            J: "[JjĲ-ĵǇ-ǌǰʲᴶⅉ⒥ⒿⓙⱼＪｊ]",
+            K: "[KkĶķǨǩᴷᵏḰ-ḵK⒦Ⓚⓚ㎄㎅㎉㎏㎑㎘㎞㎢㎦㎪㎸㎾㏀㏆㏍-㏏Ｋｋ]",
+            L: "[LlĹ-ŀǇ-ǉˡᴸḶḷḺ-ḽℒℓ℡Ⅼⅼ⒧Ⓛⓛ㋏㎈㎉㏐-㏓㏕㏖㏿ﬂﬄＬｌ]",
+            M: "[MmᴹᵐḾ-ṃ℠™ℳⅯⅿ⒨Ⓜⓜ㍷-㍹㎃㎆㎎㎒㎖㎙-㎨㎫㎳㎷㎹㎽㎿㏁㏂㏎㏐㏔-㏖㏘㏙㏞㏟Ｍｍ]",
+            N: "[NnÑñŃ-ŉǊ-ǌǸǹᴺṄ-ṋⁿℕ№⒩Ⓝⓝ㎁㎋㎚㎱㎵㎻㏌㏑Ｎｎ]",
+            O: "[OoºÒ-Öò-öŌ-őƠơǑǒǪǫȌ-ȏȮȯᴼᵒỌ-ỏₒ℅№ℴ⒪Ⓞⓞ㍵㏇㏒㏖Ｏｏ]",
+            P: "[PpᴾᵖṔ-ṗℙ⒫Ⓟⓟ㉐㍱㍶㎀㎊㎩-㎬㎰㎴㎺㏋㏗-㏚Ｐｐ]",
+            Q: "[Qqℚ⒬Ⓠⓠ㏃Ｑｑ]",
+            R: "[RrŔ-řȐ-ȓʳᴿᵣṘ-ṛṞṟ₨ℛ-ℝ⒭Ⓡⓡ㋍㍴㎭-㎯㏚㏛Ｒｒ]",
+            S: "[SsŚ-šſȘșˢṠ-ṣ₨℁℠⒮Ⓢⓢ㎧㎨㎮-㎳㏛㏜ﬆＳｓ]",
+            T: "[TtŢ-ťȚțᵀᵗṪ-ṱẗ℡™⒯Ⓣⓣ㉐㋏㎔㏏ﬅﬆＴｔ]",
+            U: "[UuÙ-Üù-üŨ-ųƯưǓǔȔ-ȗᵁᵘᵤṲ-ṷỤ-ủ℆⒰Ⓤⓤ㍳㍺Ｕｕ]",
+            V: "[VvᵛᵥṼ-ṿⅣ-Ⅷⅳ-ⅷ⒱Ⓥⓥⱽ㋎㍵㎴-㎹㏜㏞Ｖｖ]",
+            W: "[WwŴŵʷᵂẀ-ẉẘ⒲Ⓦⓦ㎺-㎿㏝Ｗｗ]",
+            X: "[XxˣẊ-ẍₓ℻Ⅸ-Ⅻⅸ-ⅻ⒳Ⓧⓧ㏓Ｘｘ]",
+            Y: "[YyÝýÿŶ-ŸȲȳʸẎẏẙỲ-ỹ⒴Ⓨⓨ㏉Ｙｙ]",
+            Z: "[ZzŹ-žǱ-ǳᶻẐ-ẕℤℨ⒵Ⓩⓩ㎐-㎔Ｚｚ]"
         };
         return function hightlight(o) {
             var regex;
@@ -1306,7 +427,7 @@
                 return;
             }
             o.pattern = _.isArray(o.pattern) ? o.pattern : [ o.pattern ];
-            regex = getRegex(o.pattern, o.caseSensitive, o.wordsOnly);
+            regex = getRegex(o.pattern, o.caseSensitive, o.wordsOnly, o.diacriticInsensitive);
             traverse(o.node, hightlightTextNode);
             function hightlightTextNode(textNode) {
                 var match, patternNode, wrapperNode;
@@ -1332,10 +453,17 @@
                 }
             }
         };
-        function getRegex(patterns, caseSensitive, wordsOnly) {
+        function accent_replacer(chr) {
+            return accented[chr.toUpperCase()] || chr;
+        }
+        function getRegex(patterns, caseSensitive, wordsOnly, diacriticInsensitive) {
             var escapedPatterns = [], regexStr;
             for (var i = 0, len = patterns.length; i < len; i++) {
-                escapedPatterns.push(_.escapeRegExChars(patterns[i]));
+                var escapedWord = _.escapeRegExChars(patterns[i]);
+                if (diacriticInsensitive) {
+                    escapedWord = escapedWord.replace(/\S/g, accent_replacer);
+                }
+                escapedPatterns.push(escapedWord);
             }
             regexStr = wordsOnly ? "\\b(" + escapedPatterns.join("|") + ")\\b" : "(" + escapedPatterns.join("|") + ")";
             return caseSensitive ? new RegExp(regexStr) : new RegExp(regexStr, "i");
@@ -1361,6 +489,14 @@
             www.mixin(this);
             this.$hint = $(o.hint);
             this.$input = $(o.input);
+            this.$input.attr({
+                "aria-activedescendant": "",
+                "aria-owns": this.$input.attr("id") + "_listbox",
+                role: "combobox",
+                "aria-readonly": "true",
+                "aria-autocomplete": "list"
+            });
+            $(www.menu).attr("id", this.$input.attr("id") + "_listbox");
             this.query = this.$input.val();
             this.queryWhenFocused = this.hasFocus() ? this.query : null;
             this.$overflowHelper = buildOverflowHelper(this.$input);
@@ -1368,6 +504,7 @@
             if (this.$hint.length === 0) {
                 this.setHint = this.getHint = this.clearHint = this.clearHintIfInvalid = _.noop;
             }
+            this.onSync("cursorchange", this._updateDescendent);
         }
         Input.normalizeQuery = function(str) {
             return _.toStr(str).replace(/^\s*/g, "").replace(/\s{2,}/g, " ");
@@ -1436,6 +573,9 @@
                 } else if (!silent && hasDifferentWhitespace) {
                     this.trigger("whitespaceChanged", this.query);
                 }
+            },
+            _updateDescendent: function updateDescendent(event, id) {
+                this.$input.attr("aria-activedescendant", id);
             },
             bind: function() {
                 var that = this, onBlur, onFocus, onKeydown, onInput;
@@ -1560,6 +700,7 @@
         "use strict";
         var keys, nameGenerator;
         keys = {
+            dataset: "tt-selectable-dataset",
             val: "tt-selectable-display",
             obj: "tt-selectable-object"
         };
@@ -1579,19 +720,20 @@
             }
             www.mixin(this);
             this.highlight = !!o.highlight;
-            this.name = o.name || nameGenerator();
+            this.name = _.toStr(o.name || nameGenerator());
             this.limit = o.limit || 5;
             this.displayFn = getDisplayFn(o.display || o.displayKey);
             this.templates = getTemplates(o.templates, this.displayFn);
             this.source = o.source.__ttAdapter ? o.source.__ttAdapter() : o.source;
             this.async = _.isUndefined(o.async) ? this.source.length > 2 : !!o.async;
             this._resetLastSuggestion();
-            this.$el = $(o.node).addClass(this.classes.dataset).addClass(this.classes.dataset + "-" + this.name);
+            this.$el = $(o.node).attr("role", "presentation").addClass(this.classes.dataset).addClass(this.classes.dataset + "-" + this.name);
         }
         Dataset.extractData = function extractData(el) {
             var $el = $(el);
             if ($el.data(keys.obj)) {
                 return {
+                    dataset: $el.data(keys.dataset) || "",
                     val: $el.data(keys.val) || "",
                     obj: $el.data(keys.obj) || null
                 };
@@ -1610,7 +752,7 @@
                 } else {
                     this._empty();
                 }
-                this.trigger("rendered", this.name, suggestions, false);
+                this.trigger("rendered", suggestions, false, this.name);
             },
             _append: function append(query, suggestions) {
                 suggestions = suggestions || [];
@@ -1621,7 +763,7 @@
                 } else if (!this.$lastSuggestion.length && this.templates.notFound) {
                     this._renderNotFound(query);
                 }
-                this.trigger("rendered", this.name, suggestions, true);
+                this.trigger("rendered", suggestions, true, this.name);
             },
             _renderSuggestions: function renderSuggestions(query, suggestions) {
                 var $fragment;
@@ -1662,7 +804,7 @@
                 _.each(suggestions, function getSuggestionNode(suggestion) {
                     var $el, context;
                     context = that._injectQuery(query, suggestion);
-                    $el = $(that.templates.suggestion(context)).data(keys.obj, suggestion).data(keys.val, that.displayFn(suggestion)).addClass(that.classes.suggestion + " " + that.classes.selectable);
+                    $el = $(that.templates.suggestion(context)).data(keys.dataset, that.name).data(keys.obj, suggestion).data(keys.val, that.displayFn(suggestion)).addClass(that.classes.suggestion + " " + that.classes.selectable);
                     fragment.appendChild($el[0]);
                 });
                 this.highlight && highlight({
@@ -1700,7 +842,7 @@
                 this.cancel = function cancel() {
                     canceled = true;
                     that.cancel = $.noop;
-                    that.async && that.trigger("asyncCanceled", query);
+                    that.async && that.trigger("asyncCanceled", query, that.name);
                 };
                 this.source(query, sync, async);
                 !syncCalled && sync([]);
@@ -1713,16 +855,17 @@
                     rendered = suggestions.length;
                     that._overwrite(query, suggestions);
                     if (rendered < that.limit && that.async) {
-                        that.trigger("asyncRequested", query);
+                        that.trigger("asyncRequested", query, that.name);
                     }
                 }
                 function async(suggestions) {
                     suggestions = suggestions || [];
                     if (!canceled && rendered < that.limit) {
                         that.cancel = $.noop;
-                        that._append(query, suggestions.slice(0, that.limit - rendered));
-                        rendered += suggestions.length;
-                        that.async && that.trigger("asyncReceived", query);
+                        var idx = Math.abs(rendered - that.limit);
+                        rendered += idx;
+                        that._append(query, suggestions.slice(0, idx));
+                        that.async && that.trigger("asyncReceived", query, that.name);
                     }
                 }
             },
@@ -1756,7 +899,7 @@
                 suggestion: templates.suggestion || suggestionTemplate
             };
             function suggestionTemplate(context) {
-                return $("<div>").text(displayFn(context));
+                return $('<div role="option">').attr("id", _.guid()).text(displayFn(context));
             }
         }
         function isValidName(str) {
@@ -1797,10 +940,11 @@
                 this.trigger.apply(this, arguments);
             },
             _allDatasetsEmpty: function allDatasetsEmpty() {
-                return _.every(this.datasets, isDatasetEmpty);
-                function isDatasetEmpty(dataset) {
-                    return dataset.isEmpty();
-                }
+                return _.every(this.datasets, _.bind(function isDatasetEmpty(dataset) {
+                    var isEmpty = dataset.isEmpty();
+                    this.$node.attr("aria-expanded", !isEmpty);
+                    return isEmpty;
+                }, this));
             },
             _getSelectables: function getSelectables() {
                 return this.$node.find(this.selectors.selectable);
@@ -1825,6 +969,12 @@
                 var that = this, onSelectableClick;
                 onSelectableClick = _.bind(this._onSelectableClick, this);
                 this.$node.on("click.tt", this.selectors.selectable, onSelectableClick);
+                this.$node.on("mouseover", this.selectors.selectable, function() {
+                    that.setCursor($(this));
+                });
+                this.$node.on("mouseleave", function() {
+                    that._removeCursor();
+                });
                 _.each(this.datasets, function(dataset) {
                     dataset.onSync("asyncRequested", that._propagate, that).onSync("asyncCanceled", that._propagate, that).onSync("asyncReceived", that._propagate, that).onSync("rendered", that._onRendered, that).onSync("cleared", that._onCleared, that);
                 });
@@ -1834,9 +984,11 @@
                 return this.$node.hasClass(this.classes.open);
             },
             open: function open() {
+                this.$node.scrollTop(0);
                 this.$node.addClass(this.classes.open);
             },
             close: function close() {
+                this.$node.attr("aria-expanded", false);
                 this.$node.removeClass(this.classes.open);
                 this._removeCursor();
             },
@@ -1900,6 +1052,55 @@
             }
         });
         return Menu;
+    }();
+    var Status = function() {
+        "use strict";
+        function Status(options) {
+            this.$el = $("<span></span>", {
+                role: "status",
+                "aria-live": "polite"
+            }).css({
+                position: "absolute",
+                padding: "0",
+                border: "0",
+                height: "1px",
+                width: "1px",
+                "margin-bottom": "-1px",
+                "margin-right": "-1px",
+                overflow: "hidden",
+                clip: "rect(0 0 0 0)",
+                "white-space": "nowrap"
+            });
+            options.$input.after(this.$el);
+            _.each(options.menu.datasets, _.bind(function(dataset) {
+                if (dataset.onSync) {
+                    dataset.onSync("rendered", _.bind(this.update, this));
+                    dataset.onSync("cleared", _.bind(this.cleared, this));
+                }
+            }, this));
+        }
+        _.mixin(Status.prototype, {
+            update: function update(event, suggestions) {
+                var length = suggestions.length;
+                var words;
+                if (length === 1) {
+                    words = {
+                        result: "result",
+                        is: "is"
+                    };
+                } else {
+                    words = {
+                        result: "results",
+                        is: "are"
+                    };
+                }
+                this.$el.text(length + " " + words.result + " " + words.is + " available, use up and down arrow keys to navigate.");
+            },
+            cleared: function() {
+                this.$el.text("");
+            }
+        });
+        return Status;
     }();
     var DefaultMenu = function() {
         "use strict";
@@ -1965,6 +1166,7 @@
             this.input = o.input;
             this.menu = o.menu;
             this.enabled = true;
+            this.autoselect = !!o.autoselect;
             this.active = false;
             this.input.hasFocus() && this.activate();
             this.dir = this.input.getLangDir();
@@ -2011,8 +1213,12 @@
             _onDatasetCleared: function onDatasetCleared() {
                 this._updateHint();
             },
-            _onDatasetRendered: function onDatasetRendered(type, dataset, suggestions, async) {
+            _onDatasetRendered: function onDatasetRendered(type, suggestions, async, dataset) {
                 this._updateHint();
+                if (this.autoselect) {
+                    var cursorClass = this.selectors.cursor.substr(1);
+                    this.menu.$node.find(this.selectors.suggestion).first().addClass(cursorClass);
+                }
                 this.eventBus.trigger("render", suggestions, async, dataset);
             },
             _onAsyncRequested: function onAsyncRequested(type, dataset, query) {
@@ -2035,7 +1241,15 @@
             _onEnterKeyed: function onEnterKeyed(type, $e) {
                 var $selectable;
                 if ($selectable = this.menu.getActiveSelectable()) {
-                    this.select($selectable) && $e.preventDefault();
+                    if (this.select($selectable)) {
+                        $e.preventDefault();
+                        $e.stopPropagation();
+                    }
+                } else if (this.autoselect) {
+                    if (this.select(this.menu.getTopSelectable())) {
+                        $e.preventDefault();
+                        $e.stopPropagation();
+                    }
                 }
             },
             _onTabKeyed: function onTabKeyed(type, $e) {
@@ -2057,12 +1271,12 @@
             },
             _onLeftKeyed: function onLeftKeyed() {
                 if (this.dir === "rtl" && this.input.isCursorAtEnd()) {
-                    this.autocomplete(this.menu.getTopSelectable());
+                    this.autocomplete(this.menu.getActiveSelectable() || this.menu.getTopSelectable());
                 }
             },
             _onRightKeyed: function onRightKeyed() {
                 if (this.dir === "ltr" && this.input.isCursorAtEnd()) {
-                    this.autocomplete(this.menu.getTopSelectable());
+                    this.autocomplete(this.menu.getActiveSelectable() || this.menu.getTopSelectable());
                 }
             },
             _onQueryChanged: function onQueryChanged(e, query) {
@@ -2162,9 +1376,9 @@
             },
             select: function select($selectable) {
                 var data = this.menu.getSelectableData($selectable);
-                if (data && !this.eventBus.before("select", data.obj)) {
+                if (data && !this.eventBus.before("select", data.obj, data.dataset)) {
                     this.input.setQuery(data.val, true);
-                    this.eventBus.trigger("select", data.obj);
+                    this.eventBus.trigger("select", data.obj, data.dataset);
                     this.close();
                     return true;
                 }
@@ -2175,21 +1389,24 @@
                 query = this.input.getQuery();
                 data = this.menu.getSelectableData($selectable);
                 isValid = data && query !== data.val;
-                if (isValid && !this.eventBus.before("autocomplete", data.obj)) {
+                if (isValid && !this.eventBus.before("autocomplete", data.obj, data.dataset)) {
                     this.input.setQuery(data.val);
-                    this.eventBus.trigger("autocomplete", data.obj);
+                    this.eventBus.trigger("autocomplete", data.obj, data.dataset);
                     return true;
                 }
                 return false;
             },
             moveCursor: function moveCursor(delta) {
-                var query, $candidate, data, payload, cancelMove;
+                var query, $candidate, data, suggestion, datasetName, cancelMove, id;
                 query = this.input.getQuery();
                 $candidate = this.menu.selectableRelativeToCursor(delta);
                 data = this.menu.getSelectableData($candidate);
-                payload = data ? data.obj : null;
+                suggestion = data ? data.obj : null;
+                datasetName = data ? data.dataset : null;
+                id = $candidate ? $candidate.attr("id") : null;
+                this.input.trigger("cursorchange", id);
                 cancelMove = this._minLengthMet() && this.menu.update(query);
-                if (!cancelMove && !this.eventBus.before("cursorchange", payload)) {
+                if (!cancelMove && !this.eventBus.before("cursorchange", suggestion, datasetName)) {
                     this.menu.setCursor($candidate);
                     if (data) {
                         this.input.setInputValue(data.val);
@@ -2197,7 +1414,7 @@
                         this.input.resetInputValue();
                         this._updateHint();
                     }
-                    this.eventBus.trigger("cursorchange", payload);
+                    this.eventBus.trigger("cursorchange", suggestion, datasetName);
                     return true;
                 }
                 return false;
@@ -2235,7 +1452,7 @@
                 www = WWW(o.classNames);
                 return this.each(attach);
                 function attach() {
-                    var $input, $wrapper, $hint, $menu, defaultHint, defaultMenu, eventBus, input, menu, typeahead, MenuConstructor;
+                    var $input, $wrapper, $hint, $menu, defaultHint, defaultMenu, eventBus, input, menu, status, typeahead, MenuConstructor;
                     _.each(datasets, function(d) {
                         d.highlight = !!o.highlight;
                     });
@@ -2266,11 +1483,16 @@
                         node: $menu,
                         datasets: datasets
                     }, www);
+                    status = new Status({
+                        $input: $input,
+                        menu: menu
+                    });
                     typeahead = new Typeahead({
                         input: input,
                         menu: menu,
                         eventBus: eventBus,
-                        minLength: o.minLength
+                        minLength: o.minLength,
+                        autoselect: o.autoselect
                     }, www);
                     $input.data(keys.www, www);
                     $input.data(keys.typeahead, typeahead);
@@ -2363,7 +1585,7 @@
                     return query;
                 } else {
                     ttEach(this, function(t) {
-                        t.setVal(newVal);
+                        t.setVal(_.toStr(newVal));
                     });
                     return this;
                 }
@@ -2394,8 +1616,10 @@
             });
         }
         function buildHintFromInput($input, www) {
-            return $input.clone().addClass(www.classes.hint).removeData().css(www.css.hint).css(getBackgroundStyles($input)).prop("readonly", true).removeAttr("id name placeholder required").attr({
-                autocomplete: "off",
+            return $input.clone().addClass(www.classes.hint).removeData().css(www.css.hint).css(getBackgroundStyles($input)).prop({
+                readonly: true,
+                required: false
+            }).removeAttr("id name placeholder").removeClass("required").attr({
                 spellcheck: "false",
                 tabindex: -1
             });
@@ -2408,7 +1632,6 @@
                 style: $input.attr("style")
             });
             $input.addClass(www.classes.input).attr({
-                autocomplete: "off",
                 spellcheck: false
             });
             try {
