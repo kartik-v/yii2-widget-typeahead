@@ -1,7 +1,8 @@
 yii2-widget-typeahead
 =====================
 
-[![Latest Stable Version](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/v/stable)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+[![Stable Version](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/v/stable)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
+[![Unstable Version](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/v/unstable)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
 [![License](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/license)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
 [![Total Downloads](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/downloads)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
 [![Monthly Downloads](https://poser.pugx.org/kartik-v/yii2-widget-typeahead/d/monthly)](https://packagist.org/packages/kartik-v/yii2-widget-typeahead)
@@ -39,7 +40,7 @@ to the ```require``` section of your `composer.json` file.
 
 ## Latest Release
 
-> NOTE: The latest version of the module is v1.0.2. Refer the [CHANGE LOG](https://github.com/kartik-v/yii2-widget-typeahead/blob/master/CHANGE.md) for details.
+> Refer the [CHANGE LOG](https://github.com/kartik-v/yii2-widget-typeahead/blob/master/CHANGE.md) for details on changes to various releases.
 
 ## Demo
 
@@ -73,4 +74,4 @@ echo $form->field($model, 'state_4')->widget(Typeahead::classname(), [
 
 ## License
 
-**yii2-widget-typeahead** is released under the BSD 3-Clause License. See the bundled `LICENSE.md` for details.
+**yii2-widget-typeahead** is released under the BSD-3-Clause License. See the bundled `LICENSE.md` for details.

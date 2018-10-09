@@ -4,7 +4,7 @@
  * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2018
  * @package yii2-widgets
  * @subpackage yii2-widget-typeahead
- * @version 1.0.2
+ * @version 1.0.3
  */
 
 namespace kartik\typeahead;
