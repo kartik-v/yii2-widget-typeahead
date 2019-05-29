@@ -1,6 +1,14 @@
 Change Log: `yii2-widget-typeahead`
 ===================================
 
+## Version 1.0.4
+
+**Date:** 29-May-2019
+
+- (enh #37): Allow empty local array.
+- (enh #32): Remove enforcement on empty arrays for widget.
+- Implement stale bot
+
 ## Version 1.0.3
 
 **Date:** 09-Oct-2018

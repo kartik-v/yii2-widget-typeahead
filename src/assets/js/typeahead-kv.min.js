@@ -1,6 +1,6 @@
 /*!
- * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2018
- * @version 1.0.3
+ * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2014 - 2019
+ * @version 1.0.4
  *
  * Krajee's extensions to the Typeahead library 
  * 
