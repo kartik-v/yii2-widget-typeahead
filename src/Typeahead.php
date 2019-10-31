@@ -33,6 +33,7 @@ use yii\web\View;
  */
 class Typeahead extends TypeaheadBasic
 {
+    public $tagContainerName = 'div';
     /**
      * @var bool whether to register and use Handle Bars Template compiler plugin. 
      * Defaults to `true`.
@@ -103,7 +104,7 @@ class Typeahead extends TypeaheadBasic
         $this->initDataset();
         $this->registerAssets();
         $this->initOptions();
-        echo Html::tag('div', $this->getInput($this->inputType), $this->container);
+        echo Html::tag($this->tagContainerName, $this->getInput($this->inputType), $this->container);
     }
 
     /**
