@@ -1,6 +1,13 @@
 Change Log: `yii2-widget-typeahead`
 ===================================
 
+## Version 1.0.5
+
+**Date:** 21-Dec-2021
+
+- (enh #47): Update handlebars JS to latest release.
+- (enh #46): Correct CSS styling for input readonly.
+
 ## Version 1.0.4
 
 **Date:** 29-May-2019
