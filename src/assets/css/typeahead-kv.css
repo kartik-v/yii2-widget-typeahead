@@ -19,7 +19,7 @@
 .tt-input.loading {
     background: transparent url('../img/loading.gif') no-repeat scroll right center content-box !important;
 }
-.twitter-typeahead input[disabled], input[readonly], fieldset[disabled] .twitter-typeahead input {
+.twitter-typeahead input[disabled], .twitter-typeahead input[readonly], fieldset[disabled] .twitter-typeahead input {
     background-color: #EEEEEE;
     cursor: not-allowed;
 }
